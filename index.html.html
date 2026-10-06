@@ -1,0 +1,872 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>パーソナルトレーニング診断</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #fdfbf7;
+            color: #333;
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #b8860b 0%, #ffd700 100%);
+            color: white;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.2);
+            transition: all 0.3s ease;
+        }
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(184, 134, 11, 0.3);
+        }
+        .step-container {
+            display: none;
+            animation: fadeIn 0.5s ease;
+        }
+        .step-container.active {
+            display: block;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .option-label {
+            border: 2px solid #e5e7eb;
+            transition: all 0.2s;
+        }
+        .option-label:hover {
+            border-color: #b8860b;
+            background-color: #fff9e6;
+        }
+        input[type="radio"]:checked + .option-label,
+        input[type="checkbox"]:checked + .option-label {
+            border-color: #b8860b;
+            background-color: #fff9e6;
+        }
+        input[type="radio"]:checked + .option-label .check-icon,
+        input[type="checkbox"]:checked + .option-label .check-icon {
+            color: #b8860b;
+            opacity: 1;
+        }
+        .result-card {
+            background: #fff;
+            border-left: 4px solid #b8860b;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+    </style>
+</head>
+<body class="min-h-screen pb-20">
+
+    <!-- Header -->
+    <header class="bg-white shadow-sm p-4 sticky top-0 z-50">
+        <div class="max-w-md mx-auto flex justify-center items-center">
+            <h1 class="text-lg font-bold text-gray-800 tracking-wider">パーソナル処方箋</h1>
+        </div>
+    </header>
+
+    <main class="max-w-md mx-auto p-4 mt-4" id="app-container">
+        
+        <!-- Step 0: Intro -->
+        <div id="step-0" class="step-container active">
+            <img src="https://placehold.co/600x400/b8860b/ffffff?text=Personal+Training" alt="Hero Image" class="w-full h-48 object-cover rounded-xl shadow-md mb-6">
+            <h2 class="text-2xl font-bold text-center mb-4 text-gray-800">あなた専用の<br>完全個別プログラム診断</h2>
+            <p class="text-sm text-gray-600 mb-8 leading-relaxed">
+                現在の体型、目的、運動レベルを分析し、**種目・回数・セット数・休憩時間**まで網羅した、あなただけのパーソナルトレーニングメニューをその場で構築します。
+            </p>
+            <button onclick="nextStep(1)" class="w-full btn-primary font-bold py-4 rounded-xl shadow-lg flex justify-center items-center gap-2 text-lg">
+                診断をスタートする <i class="fa-solid fa-arrow-right"></i>
+            </button>
+        </div>
+
+        <!-- Step 1: 現状のヒアリング (複数選択可) -->
+        <div id="step-1" class="step-container">
+            <div class="mb-6 flex justify-between items-center text-sm text-gray-400 font-bold">
+                <span>STEP 1/6</span>
+                <span class="text-yellow-600">現状のお悩み</span>
+            </div>
+            <h2 class="text-xl font-bold mb-2">現在、お身体で一番気になっていることは何ですか？</h2>
+            <p class="text-xs text-gray-500 mb-6">※複数選択可（当てはまるものを全てお選びください）</p>
+            
+            <div class="space-y-3" id="options-troubles"></div>
+            <div class="mt-8">
+                <button onclick="nextStep(2)" class="w-full btn-primary font-bold py-4 rounded-xl shadow-lg">次へ進む</button>
+            </div>
+        </div>
+
+        <!-- Step 2: 目的（単一選択） -->
+        <div id="step-2" class="step-container">
+            <div class="mb-6 flex justify-between items-center text-sm text-gray-400 font-bold">
+                <span>STEP 2/6</span>
+                <span class="text-yellow-600">一番の目的</span>
+            </div>
+            <h2 class="text-xl font-bold mb-2">あなたがトレーニングを始める「一番の目的」は何ですか？</h2>
+            <p class="text-xs text-gray-500 mb-6">※最も当てはまるものを【1つだけ】お選びください。</p>
+            
+            <div class="space-y-3" id="options-purpose"></div>
+            
+            <!-- 追加: 減量目標 (「減量・引き締め」選択時のみ表示) -->
+            <div id="weight-loss-target-container" class="mt-6 hidden bg-[#fff9e6] p-4 rounded-xl border border-yellow-200">
+                <h3 class="font-bold text-sm text-gray-800 mb-3"><i class="fa-solid fa-weight-scale text-yellow-600"></i> 具体的にどれくらい落としたいですか？</h3>
+                <div class="space-y-2" id="options-weight-loss"></div>
+            </div>
+
+            <div class="mt-8 flex gap-3">
+                <button onclick="prevStep(1)" class="w-1/3 bg-gray-200 text-gray-700 font-bold py-4 rounded-xl">戻る</button>
+                <button onclick="nextStep(3)" class="w-2/3 btn-primary font-bold py-4 rounded-xl shadow-lg">次へ進む</button>
+            </div>
+        </div>
+
+        <!-- Step 3: 環境と経験（単一選択） -->
+        <div id="step-3" class="step-container">
+            <div class="mb-6 flex justify-between items-center text-sm text-gray-400 font-bold">
+                <span>STEP 3/6</span>
+                <span class="text-yellow-600">環境と経験</span>
+            </div>
+            <h2 class="text-xl font-bold mb-6">トレーニング環境とご経験について教えてください。</h2>
+            
+            <div class="mb-6">
+                <h3 class="font-bold mb-3 text-sm text-gray-700">Q. 想定しているメインの環境は？</h3>
+                <div class="grid grid-cols-2 gap-3" id="options-env"></div>
+            </div>
+
+            <div class="mb-6">
+                <h3 class="font-bold mb-3 text-sm text-gray-700">Q. トレーニングのご経験は？</h3>
+                <div class="space-y-3" id="options-exp"></div>
+            </div>
+
+            <div class="mt-8 flex gap-3">
+                <button onclick="prevStep(2)" class="w-1/3 bg-gray-200 text-gray-700 font-bold py-4 rounded-xl">戻る</button>
+                <button onclick="nextStep(4)" class="w-2/3 btn-primary font-bold py-4 rounded-xl shadow-lg">次へ進む</button>
+            </div>
+        </div>
+
+        <!-- Step 4: 運動能力のチェック -->
+        <div id="step-4" class="step-container">
+            <div class="mb-6 flex justify-between items-center text-sm text-gray-400 font-bold">
+                <span>STEP 4/6</span>
+                <span class="text-yellow-600">運動能力</span>
+            </div>
+            <h2 class="text-xl font-bold mb-2">現在の体力・筋力レベルに一番近いものはどれですか？</h2>
+            <div class="bg-blue-50 border border-blue-200 text-blue-800 text-xs p-3 rounded-lg mb-6 flex gap-2 items-start">
+                <i class="fa-solid fa-circle-info mt-0.5"></i>
+                <p>ここを詳しくお答えいただくと、あなたに最適な<strong class="font-bold">「強度（回数）やセット数」</strong>が正確に割り出されます。</p>
+            </div>
+            
+            <div class="space-y-3" id="options-level"></div>
+
+            <div class="mt-8 flex gap-3">
+                <button onclick="prevStep(3)" class="w-1/3 bg-gray-200 text-gray-700 font-bold py-4 rounded-xl">戻る</button>
+                <button onclick="nextStep(5)" class="w-2/3 btn-primary font-bold py-4 rounded-xl shadow-lg">次へ進む</button>
+            </div>
+        </div>
+
+        <!-- Step 5: 基本情報 -->
+        <div id="step-5" class="step-container">
+            <div class="mb-6 flex justify-between items-center text-sm text-gray-400 font-bold">
+                <span>STEP 5/6</span>
+                <span class="text-yellow-600">基本データ</span>
+            </div>
+            <h2 class="text-xl font-bold mb-2">正確なプログラム作成のため、現状の数値をお教えください。</h2>
+            <p class="text-xs text-gray-500 mb-6">※わからない項目は空欄で構いません。</p>
+            
+            <div class="space-y-5">
+                <div>
+                    <label class="block text-sm font-bold text-gray-700 mb-2">性別</label>
+                    <div class="grid grid-cols-3 gap-2">
+                        <label class="cursor-pointer">
+                            <input type="radio" name="gender" value="female" class="peer sr-only" checked>
+                            <div class="text-center p-2 rounded-lg border-2 border-gray-200 peer-checked:border-yellow-600 peer-checked:bg-[#fff9e6] peer-checked:text-yellow-700 text-sm font-medium text-gray-600 transition-all">女性</div>
+                        </label>
+                        <label class="cursor-pointer">
+                            <input type="radio" name="gender" value="male" class="peer sr-only">
+                            <div class="text-center p-2 rounded-lg border-2 border-gray-200 peer-checked:border-yellow-600 peer-checked:bg-[#fff9e6] peer-checked:text-yellow-700 text-sm font-medium text-gray-600 transition-all">男性</div>
+                        </label>
+                        <label class="cursor-pointer">
+                            <input type="radio" name="gender" value="other" class="peer sr-only">
+                            <div class="text-center p-2 rounded-lg border-2 border-gray-200 peer-checked:border-yellow-600 peer-checked:bg-[#fff9e6] peer-checked:text-yellow-700 text-sm font-medium text-gray-600 transition-all">答えない</div>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-bold text-gray-700 mb-1">年齢</label>
+                        <div class="flex items-center gap-2">
+                            <!-- 追加: pattern="[0-9]*" でiOSでも確実にテンキーを出す -->
+                            <input type="number" inputmode="numeric" pattern="[0-9]*" id="input-age" class="w-full border border-gray-300 rounded-lg p-3 text-base focus:outline-none focus:border-yellow-600 focus:ring-2 focus:ring-yellow-200 transition-all bg-gray-50 focus:bg-white">
+                            <span class="text-sm text-gray-600 font-medium">歳</span>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-bold text-gray-700 mb-1">身長</label>
+                        <div class="flex items-center gap-2">
+                            <input type="number" inputmode="numeric" pattern="[0-9]*" id="input-height" class="w-full border border-gray-300 rounded-lg p-3 text-base focus:outline-none focus:border-yellow-600 focus:ring-2 focus:ring-yellow-200 transition-all bg-gray-50 focus:bg-white">
+                            <span class="text-sm text-gray-600 font-medium">cm</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-bold text-gray-700 mb-1">体重</label>
+                        <div class="flex items-center gap-2">
+                            <input type="number" inputmode="numeric" pattern="[0-9]*" id="input-weight" class="w-full border border-gray-300 rounded-lg p-3 text-base focus:outline-none focus:border-yellow-600 focus:ring-2 focus:ring-yellow-200 transition-all bg-gray-50 focus:bg-white">
+                            <span class="text-sm text-gray-600 font-medium">kg</span>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-bold text-gray-700 mb-1">体脂肪率</label>
+                        <div class="flex items-center gap-2">
+                            <input type="number" inputmode="numeric" pattern="[0-9]*" id="input-fat" class="w-full border border-gray-300 rounded-lg p-3 text-base focus:outline-none focus:border-yellow-600 focus:ring-2 focus:ring-yellow-200 transition-all bg-gray-50 focus:bg-white" placeholder="空欄可">
+                            <span class="text-sm text-gray-600 font-medium">%</span>
+                        </div>
+                        <p class="text-[10px] text-gray-400 mt-1">※わからない場合は空欄でOK</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 追加: スマホのキーボードが出た際にボタンが隠れないように、下部に余裕(pb-24)を持たせる -->
+            <div class="mt-8 flex gap-3 pb-24">
+                <button onclick="prevStep(4)" class="w-1/3 bg-gray-200 text-gray-700 font-bold py-4 rounded-xl">戻る</button>
+                <button onclick="calculateResult()" class="w-2/3 btn-primary font-bold py-4 rounded-xl shadow-lg flex justify-center items-center gap-2">
+                    プログラム生成 <i class="fa-solid fa-wand-magic-sparkles"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Step 6: 診断結果 (詳細メニュー) -->
+        <div id="step-6" class="step-container">
+            <div class="text-center mb-6">
+                <p class="text-sm text-yellow-600 font-bold mb-1">ANALYSIS COMPLETE</p>
+                <h2 class="text-2xl font-bold text-gray-800" id="result-title">あなた専用プログラム</h2>
+            </div>
+
+            <!-- 総評と基本設定 -->
+            <div class="bg-gray-800 text-white rounded-xl p-5 mb-6 shadow-md relative overflow-hidden">
+                <div class="absolute -right-4 -top-4 opacity-10">
+                    <i class="fa-solid fa-dumbbell text-9xl"></i>
+                </div>
+                <h3 class="text-sm text-gray-300 font-bold mb-2 border-b border-gray-600 pb-2">プロからの処方箋</h3>
+                <p class="text-sm mb-4 leading-relaxed" id="result-comment"></p>
+                
+                <div class="grid grid-cols-3 gap-2 text-center mt-4">
+                    <div class="bg-gray-700 rounded-lg p-2">
+                        <div class="text-[10px] text-gray-400">推奨回数・秒数</div>
+                        <div class="font-bold text-sm" id="res-reps">--</div>
+                    </div>
+                    <div class="bg-gray-700 rounded-lg p-2">
+                        <div class="text-[10px] text-gray-400">推奨セット数</div>
+                        <div class="font-bold text-sm" id="res-sets">--</div>
+                    </div>
+                    <div class="bg-gray-700 rounded-lg p-2">
+                        <div class="text-[10px] text-gray-400">インターバル</div>
+                        <div class="font-bold text-sm text-yellow-400" id="res-rest">--</div>
+                    </div>
+                </div>
+                
+                <!-- カロリー表示エリアの追加 -->
+                <div class="mt-3 bg-gray-700/50 rounded-lg p-2 text-center border border-gray-600 flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-fire text-red-400"></i>
+                    <span class="text-xs text-gray-300">本メニューの推定消費カロリー：</span>
+                    <span class="font-bold text-yellow-400 text-lg" id="res-calorie">-- <span class="text-xs">kcal</span></span>
+                </div>
+            </div>
+
+            <!-- 動的メニューリスト -->
+            <div class="mb-8">
+                <h3 class="font-bold text-gray-800 mb-3 flex items-center gap-2">
+                    <i class="fa-solid fa-list-check text-yellow-600"></i> 本日のメニュー構成
+                </h3>
+                
+                <div id="menu-container" class="space-y-4">
+                    <!-- JSで動的にメニューカードを生成 -->
+                </div>
+            </div>
+
+            <!-- LINE送信ボタン -->
+            <div class="bg-white p-4 rounded-xl border border-gray-200 mb-6 text-center">
+                <p class="text-xs text-gray-600 mb-3">このメニューを忘れないように、LINEのトーク画面にメモとして送信・保存しておきましょう。</p>
+                <button onclick="sendToLine()" class="w-full bg-[#06C755] hover:bg-[#05b34c] text-white font-bold py-4 rounded-xl shadow-lg flex justify-center items-center gap-2 text-lg transition-all">
+                    <i class="fa-brands fa-line text-2xl"></i> メニューをLINEに送る
+                </button>
+                <p class="text-xs text-gray-500 mt-3" id="line-message"></p>
+            </div>
+            
+            <div class="text-center">
+                 <button onclick="location.reload()" class="text-sm text-gray-400 underline">最初からやり直す</button>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- 🌟 種目のやり方解説モーダル (初期状態は非表示) -->
+    <div id="exercise-modal" class="fixed inset-0 bg-black/60 z-[100] hidden flex justify-center items-center p-4 opacity-0 transition-opacity duration-300">
+        <div class="bg-white rounded-2xl w-full max-w-md p-6 relative transform scale-95 transition-transform duration-300 overflow-y-auto max-h-[90vh]" id="exercise-modal-content">
+            <button onclick="closeModal()" class="absolute top-4 right-4 text-gray-400 hover:text-gray-700 w-8 h-8 flex justify-center items-center bg-gray-100 rounded-full z-10">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+            
+            <div class="mb-4 flex items-center gap-3 pr-8">
+                <div class="flex items-center justify-center w-10 h-10 bg-yellow-100 text-yellow-600 rounded-full flex-shrink-0">
+                    <i class="fa-solid fa-person-chalkboard"></i>
+                </div>
+                <h3 id="modal-title" class="text-lg font-bold text-gray-800 leading-tight"></h3>
+            </div>
+            
+            <p id="modal-target" class="text-xs font-bold text-blue-600 mb-4 bg-blue-50 inline-block px-2 py-1 rounded"></p>
+            
+            <!-- CSSコーディングによるグラフィカルなイメージエリア -->
+            <div class="mb-5 rounded-2xl overflow-hidden relative bg-gradient-to-br from-gray-800 to-gray-900 h-48 flex flex-col items-center justify-center shadow-inner group">
+                <!-- 背景の装飾サークル（ぼかし光効果） -->
+                <div class="absolute w-64 h-64 bg-yellow-500/10 rounded-full blur-2xl -top-10 -right-10 group-hover:scale-110 transition-transform duration-700"></div>
+                <div class="absolute w-40 h-40 bg-blue-500/10 rounded-full blur-xl -bottom-8 -left-8 group-hover:scale-110 transition-transform duration-700"></div>
+                
+                <!-- 動的アイコン表示部分（グラスモーフィズム調） -->
+                <div class="relative z-10 w-20 h-20 bg-white/10 backdrop-blur-sm rounded-full flex justify-center items-center mb-3 border border-white/20 shadow-[0_0_15px_rgba(255,215,0,0.2)]">
+                    <i id="modal-visual-icon" class="fa-solid fa-dumbbell text-4xl text-yellow-400"></i>
+                </div>
+                
+                <div class="relative z-10 text-center">
+                    <p class="text-white text-sm font-bold tracking-wider" id="modal-visual-text">STRENGTH</p>
+                    <p class="text-gray-400 text-[10px] mt-1 tracking-widest">FOCUS ON FORM</p>
+                </div>
+            </div>
+            
+            <div class="bg-gray-50 p-4 rounded-xl border border-gray-200 mb-4">
+                <h4 class="font-bold text-sm text-gray-700 mb-2 border-b border-gray-200 pb-1 flex items-center gap-2">
+                    <i class="fa-solid fa-lightbulb text-yellow-500"></i> プロのアドバイス
+                </h4>
+                <p id="modal-instruction" class="text-sm text-gray-600 leading-relaxed"></p>
+            </div>
+
+            <!-- 追加: YouTube検索連携ボタン -->
+            <a id="modal-youtube-btn" href="#" target="_blank" rel="noopener noreferrer" class="w-full flex items-center justify-center gap-2 bg-[#FF0000] hover:bg-[#cc0000] text-white font-bold py-3 rounded-xl shadow-md transition-colors mb-3">
+                <i class="fa-brands fa-youtube text-xl"></i> 動画でやり方を確認する
+            </a>
+
+            <button onclick="closeModal()" class="w-full bg-gray-200 text-gray-700 font-bold py-3 rounded-xl shadow-sm">閉じる</button>
+        </div>
+    </div>
+
+    <script>
+        // アンケートデータ
+        const questions = {
+            troubles: [
+                { id: 't1', label: '最近、お腹周りやお尻のたるみが気になってきた' },
+                { id: 't2', label: '昔より食べる量は増えていないのに太りやすくなった' },
+                { id: 't3', label: '慢性的な肩こり・首こり・腰痛がある' },
+                { id: 't4', label: '夕方になると疲れやすく、体力が落ちたのを感じる' },
+                { id: 't5', label: 'むくみや冷え性がひどく、血流が悪い気がする' },
+                { id: 't6', label: '姿勢が悪く（猫背・巻き肩）、老けて見られる' }
+            ],
+            weightLossTargets: [
+                { id: 'wlt1', label: '2〜3kg（少しスッキリさせたい）' },
+                { id: 'wlt2', label: '5kg前後（服のサイズを下げたい）' },
+                { id: 'wlt3', label: '10kg以上（しっかり劇的に変えたい）' },
+                { id: 'wlt4', label: '体重より見た目の引き締めを重視' }
+            ],
+            purposes: [
+                { id: 'p1', label: '【減量・引き締め】<br><span class="text-xs text-gray-500 font-normal mt-1 block">とにかく体重や体脂肪を落とし、スッキリしたい</span>' },
+                { id: 'p2', label: '【ボディメイク】<br><span class="text-xs text-gray-500 font-normal mt-1 block">体重より見た目重視。ヒップアップやメリハリを作りたい</span>' },
+                { id: 'p3', label: '【筋力アップ・体力向上】<br><span class="text-xs text-gray-500 font-normal mt-1 block">筋肉をつけて基礎代謝を上げ、アクティブに動きたい</span>' },
+                { id: 'p4', label: '【不調改善・健康】<br><span class="text-xs text-gray-500 font-normal mt-1 block">肩こり腰痛などの改善や、疲れにくい身体にしたい</span>' }
+            ],
+            environments: [
+                { id: 'e1', label: '自宅<br><span class="text-[10px] text-gray-500">器具なし</span>' },
+                { id: 'e3', label: '自宅<br><span class="text-[10px] text-gray-500">ダンベル等あり</span>' },
+                { id: 'e2', label: 'ジム<br><span class="text-[10px] text-gray-500">通う予定/通っている</span>' }
+            ],
+            experiences: [
+                { id: 'exp1', label: '全くの初心者（運動習慣なし）' },
+                { id: 'exp2', label: '初級者（YouTubeなどを見て自己流で時々）' },
+                { id: 'exp3', label: '中級者（ジムでのマシントレや継続的な運動習慣あり）' },
+                { id: 'exp4', label: '上級者（週3回以上、本格的に鍛えている）' }
+            ],
+            levels: [
+                { id: 'l1', label: '階段を2階まで上るだけで息が上がる（運動不足）' },
+                { id: 'l2', label: '日常生活は平気だが、腕立てや腹筋は1回もできない' },
+                { id: 'l3', label: '膝つき腕立てやスクワットなら10回程度はできる' },
+                { id: 'l4', label: 'ジムの重りを使ったハードな運動も問題なくできる' },
+                { id: 'l0', label: 'わからない（標準的な強度で計算します）' }
+            ]
+        };
+
+        // トレーニング種目データベース (解説テキスト追加)
+        const exercisesDB = {
+            warmup: [
+                { id: 'w1', name: 'キャット＆カウ', target: '背骨・体幹', type: 'stretch', env: 'all', instruction: '四つん這いになり、息を吐きながら背中を丸め、吸いながら胸を張って背中を反らします。背骨を波打たせるように動かしましょう。' },
+                { id: 'w2', name: '股関節ダイナミックストレッチ', target: '股関節', type: 'stretch', env: 'all', instruction: '足を大きく開き、片方の膝を曲げて腰を深く落とし、内ももと股関節周りを伸ばします。左右交互にリズミカルに行います。' },
+                { id: 'w3', name: 'トレッドミル(早歩き) 5分', target: '全身', type: 'cardio', env: 'e2', instruction: '軽く息が弾み、うっすら汗をかく程度のスピード（時速5〜6km）で早歩きを行います。' },
+                { id: 'w4', name: 'アームサークル', target: '肩・肩甲骨', type: 'stretch', env: 'all', instruction: '両手を肩の高さに広げ、肩甲骨から大きく円を描くように前回し・後ろ回しを行います。' },
+                { id: 'w5', name: '体幹ひねり（動的ストレッチ）', target: 'お腹・腰回り', type: 'stretch', env: 'all', instruction: '足を肩幅に開き、腕を胸の前で水平に保ったまま、左右に大きく上体をねじります。視線も後ろに向けましょう。' }
+            ],
+            main: [
+                // === 自宅用 (e1 器具なし, e3 器具あり共用) ===
+                { id: 'm_e1_1', name: 'ワイドスクワット', target: '下半身全体・内もも', env: 'e1', purpose: ['p1', 'p2', 'p3'], instruction: '足を肩幅の1.5倍に開き、つま先を外側に向けます。膝がつま先と同じ方向に向くように、お尻を後ろに引きながら腰を落とします。' },
+                { id: 'm_e1_6', name: 'マウンテンクライマー', target: '全身（有酸素）', env: 'e1', purpose: ['p1', 'p3'], isTimeBased: true, instruction: '腕立て伏せの姿勢から、左右の膝を交互に胸に近づけるように、走るようなペースで素早く動かします。※ジャンプせずリズミカルに行います。' },
+                { id: 'm_e1_8', name: 'リバースランジ', target: 'お尻・太もも', env: 'e1', purpose: ['p1', 'p2', 'p3'], instruction: '直立姿勢から片足を大きく後ろに引き、両膝が90度になるまで腰を落とします。前足のかかとで踏ん張って元に戻ります。' },
+                { id: 'm_e1_9', name: '膝つきプッシュアップ', target: '胸・二の腕', env: 'e1', purpose: ['p1', 'p2', 'p3'], instruction: '膝をついた状態で腕立て伏せを行います。頭から膝までが一直線になるように体幹をキープし、胸を床ギリギリまで下ろします。' },
+                { id: 'm_e1_2', name: 'ブルガリアンスクワット', target: 'お尻・太もも', env: 'e1', purpose: ['p1', 'p2', 'p3'], instruction: '後ろ足を椅子やソファに乗せ、前足に体重をかけます。前足の膝が90度になるまで、お尻を真下に落としていきます。' },
+                { id: 'm_e1_3', name: 'プランク', target: '体幹・お腹', env: 'e1', purpose: ['p1', 'p2', 'p3', 'p4'], isTimeBased: true, instruction: 'うつ伏せになり、肘とつま先で身体を支えます。頭からかかとまでが一直線になるよう、お腹に力を入れてキープします。' },
+                { id: 'm_e1_4', name: 'ヒップリフト', target: 'お尻・裏もも', env: 'e1', purpose: ['p2', 'p3', 'p4'], instruction: '仰向けになり膝を立てます。かかとで床を押し、お尻をキュッと締めながら、肩から膝が一直線になるまで持ち上げます。' },
+                { id: 'm_e1_10', name: 'クランチ（腹筋）', target: 'お腹上部', env: 'e1', purpose: ['p2', 'p3'], instruction: '仰向けで膝を曲げ、手は頭の後ろか胸の前に。息を吐きながら、おへそを覗き込むように肩甲骨が浮く程度まで上体を丸めます。' },
+                { id: 'm_e1_11', name: 'ロシアンツイスト', target: 'お腹・くびれ', env: 'e1', purpose: ['p2', 'p3'], instruction: '床に座り、膝を軽く曲げて足を浮かせます。上体を少し後ろに倒し、お腹に力を入れたまま両手を左右の床に交互にタッチします。' },
+                { id: 'm_e1_12', name: 'リバーススノーエンジェル', target: '背中・美姿勢', env: 'e1', purpose: ['p2', 'p3', 'p4'], instruction: 'うつ伏せになり、少し胸を浮かせます。両手を頭の先から腰に向かって、円を描くように大きく動かし、肩甲骨を寄せます。' },
+                { id: 'm_e1_5', name: 'バードドッグ', target: '体幹・背中', env: 'e1', purpose: ['p4', 'p3'], instruction: '四つん這いになり、対角線上の手と足（右腕と左脚など）を床と水平になるまで伸ばし、数秒キープします。腰が反らないよう注意。' },
+                { id: 'm_e1_13', name: 'デッドバグ', target: '深層筋・腰痛予防', env: 'e1', purpose: ['p4', 'p2'], instruction: '仰向けになり、両手両足を天井に向けて伸ばします。腰を床に押し付けたまま、対角線上の手足をゆっくり床ギリギリまで下ろして戻します。' },
+                { id: 'm_e1_14', name: 'カーフレイズ', target: 'ふくらはぎ・むくみ解消', env: 'e1', purpose: ['p4', 'p2'], instruction: '壁などに手をついて立ち、両足のかかとを高く上げ、ゆっくりと下ろします。ふくらはぎの筋肉を意識します。' },
+                { id: 'm_e1_15', name: 'タオルラットプルダウン', target: '肩甲骨・肩こり解消', env: 'e1', purpose: ['p4', 'p2'], instruction: 'タオルを両手でピンと張って持ち、バンザイします。タオルの張りを保ったまま、肩甲骨を寄せるように胸に引き下ろします。' },
+                
+                // 追加: 自宅用 有酸素（飛ばないローインパクト系）
+                { id: 'm_e1_16', name: 'シャドーボクシング', target: '全身・二の腕・背中', type: 'cardio', env: 'e1', purpose: ['p1', 'p2', 'p3', 'p4'], isTimeBased: true, instruction: '足を肩幅に開き、膝を軽く曲げます。リズミカルに左右のパンチ（ストレートやフック）を前方に繰り出します。肩甲骨から動かす意識で。' },
+                { id: 'm_e1_17', name: 'ローインパクト・バーピー', target: '全身・心肺機能', type: 'cardio', env: 'e1', purpose: ['p1', 'p3'], isTimeBased: true, instruction: 'ジャンプしないバーピーです。しゃがんで両手を床につき、片足ずつ後ろに伸ばしてプランクの姿勢になり、また片足ずつ戻して立ち上がります。' },
+                { id: 'm_e1_18', name: 'スタンディング・クロスニー', target: 'お腹・全身（有酸素）', type: 'cardio', env: 'e1', purpose: ['p1', 'p2', 'p3'], isTimeBased: true, instruction: '立った状態で、右肘と左膝、左肘と右膝を対角線上に合わせるように身体をひねりながらテンポよく引き寄せます。' },
+
+                // === ジム用 (e2) ===
+                { id: 'm_e2_1', name: 'レッグプレス', target: '下半身全体', env: 'e2', purpose: ['p1', 'p2', 'p3'], instruction: 'マシンに座り、足を肩幅に開いてプレートに乗せます。膝が90度になるまでゆっくり曲げ、かかとで押し返すように伸ばします。' },
+                { id: 'm_e2_2', name: 'ラットプルダウン', target: '背中・姿勢改善', env: 'e2', purpose: ['p1', 'p2', 'p3', 'p4'], instruction: 'バーを広めに握り、胸を張りながら鎖骨に向かってバーを引き下ろします。肩甲骨を寄せる意識で行います。' },
+                { id: 'm_e2_4', name: 'チェストプレス', target: '胸・バストアップ', env: 'e2', purpose: ['p1', 'p2', 'p3'], instruction: 'グリップが胸の高さになるように座ります。胸を張り、肩甲骨を寄せたまま、ハンドルを前に押し出します。' },
+                { id: 'm_e2_6', name: 'スミスマシンスクワット', target: '下半身全体・お尻', env: 'e2', purpose: ['p1', 'p2', 'p3'], instruction: 'バーを肩に担ぎ、足を肩幅に開きます。背筋を伸ばしたまま、椅子に座るようにお尻を後ろに引きながらしゃがみ、立ち上がります。' },
+                { id: 'm_e2_3', name: 'ヒップアブダクション', target: 'お尻（中殿筋）', env: 'e2', purpose: ['p2', 'p3'], instruction: 'マシンに座り、パッドを膝の外側に当てます。お尻の横の筋肉を意識しながら、両脚を力強く外側に開きます。' },
+                { id: 'm_e2_5', name: 'ロータリートルソー', target: 'お腹（くびれ）', env: 'e2', purpose: ['p2', 'p3'], instruction: 'マシンに座り、上半身を固定したまま、お腹の力を使って下半身（シート）を左右にひねります。' },
+                { id: 'm_e2_7', name: 'レッグカール', target: '裏もも（引き締め）', env: 'e2', purpose: ['p2', 'p3'], instruction: 'うつ伏せ、または座った状態でマシンにセットし、かかとでお尻を蹴るように膝を曲げて裏ももを収縮させます。' },
+                { id: 'm_e2_8', name: 'アブドミナルクランチ', target: 'お腹', env: 'e2', purpose: ['p2', 'p3'], instruction: 'マシンに座り、ハンドルを握ります。おへそを覗き込むように背中を丸め、腹筋をギュッと収縮させます。' },
+                { id: 'm_e2_9', name: 'シーテッドローイング', target: '背中・厚み', env: 'e2', purpose: ['p2', 'p3'], instruction: 'マシンに座り、ハンドルを握ります。胸を張り、肩甲骨を中央に寄せるようにしながら、おへその位置に向かってハンドルを引きます。' },
+                { id: 'm_e2_10', name: 'バックエクステンション', target: '腰回り・姿勢保持', env: 'e2', purpose: ['p4', 'p3'], instruction: '専用の台にうつ伏せになり、上体をゆっくりと下ろした後、背中の力で体が一直線になるまで持ち上げます。反らしすぎないよう注意。' },
+                { id: 'm_e2_11', name: 'ケーブルローイング（軽負荷）', target: '肩甲骨・肩こり予防', env: 'e2', purpose: ['p4'], instruction: '軽い重量に設定し、肩をすくめないように注意しながらケーブルを胸に引き寄せ、肩甲骨を大きく動かします。' },
+                
+                // 追加: ジム用 有酸素マシン
+                { id: 'm_e2_c1', name: 'トレッドミル（傾斜ウォーキング）', target: '全身・脂肪燃焼', type: 'cardio', env: 'e2', purpose: ['p1', 'p2', 'p3', 'p4'], isTimeBased: true, instruction: '傾斜を5〜10%に設定し、時速4.5〜5.5kmの早歩きで行います。息が少し弾む程度をキープしましょう。' },
+                { id: 'm_e2_c2', name: 'エアロバイク', target: '下半身・脂肪燃焼', type: 'cardio', env: 'e2', purpose: ['p1', 'p2', 'p3', 'p4'], isTimeBased: true, instruction: 'ペダルを漕ぐ際、少し重さを感じるレベルに設定します。心拍数が110〜130回/分になるペースを維持します。' },
+                { id: 'm_e2_c3', name: 'クロストレーナー', target: '全身・脂肪燃焼', type: 'cardio', env: 'e2', purpose: ['p1', 'p2', 'p3', 'p4'], isTimeBased: true, instruction: '腕と脚を連動させて動かします。関節への負担が少なく、全身の筋肉を使って効率よくカロリーを消費できます。' }
+            ]
+        };
+
+        // ユーザーの回答
+        let userAnswers = { troubles: [], purpose: '', weightLossTarget: '', environment: '', experience: '', level: '' };
+        let generatedProgramText = ""; // LINE送信用のテキスト保持
+
+        // LIFFの初期化
+        const myLiffId = "YOUR_LIFF_ID_HERE"; // ★ここに取得したLIFF IDを貼り付けてください（例: "1234567890-abcdefgh"）
+
+        function initializeLiff() {
+            liff.init({
+                liffId: myLiffId
+            }).then(() => {
+                console.log("LIFF Initialized");
+            }).catch((err) => {
+                console.error("LIFF Initialization failed", err);
+            });
+        }
+
+        function init() {
+            renderMultipleChoices('options-troubles', questions.troubles, 'troubles', 'checkbox');
+            renderSingleChoice('options-purpose', questions.purposes, 'purpose');
+            renderSingleChoice('options-weight-loss', questions.weightLossTargets, 'weightLossTarget');
+            renderSingleChoice('options-env', questions.environments, 'environment', true);
+            renderSingleChoice('options-exp', questions.experiences, 'experience');
+            renderSingleChoice('options-level', questions.levels, 'level');
+        }
+
+        function renderMultipleChoices(containerId, options, groupName, type) {
+            const container = document.getElementById(containerId);
+            options.forEach(opt => {
+                const div = document.createElement('div');
+                div.className = 'relative';
+                div.innerHTML = `
+                    <input type="${type}" id="${opt.id}" name="${groupName}" value="${opt.id}" class="peer sr-only" onchange="updateAnswers('${groupName}', '${opt.id}', this.checked, '${type}')">
+                    <label for="${opt.id}" class="option-label block w-full p-4 rounded-xl cursor-pointer bg-white shadow-sm flex items-start gap-3">
+                        <i class="fa-solid fa-check check-icon text-gray-200 mt-1 opacity-50 transition-opacity"></i>
+                        <span class="font-medium text-sm text-gray-700 leading-tight">${opt.label}</span>
+                    </label>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        function renderSingleChoice(containerId, options, groupName, isGrid = false) {
+            const container = document.getElementById(containerId);
+            options.forEach(opt => {
+                const div = document.createElement('div');
+                div.className = isGrid ? 'relative h-full' : 'relative';
+                const labelClass = isGrid ? 'option-label block w-full h-full p-3 text-center rounded-xl cursor-pointer bg-white shadow-sm' : 'option-label block w-full p-4 rounded-xl cursor-pointer bg-white shadow-sm flex items-center gap-3';
+                let innerHtml = `<input type="radio" id="${opt.id}" name="${groupName}" value="${opt.id}" class="peer sr-only" onchange="updateAnswers('${groupName}', '${opt.id}', true, 'radio')">`;
+                
+                if(isGrid) {
+                    innerHtml += `<label for="${opt.id}" class="${labelClass}"><span class="font-medium text-sm text-gray-700 leading-tight">${opt.label}</span></label>`;
+                } else {
+                    innerHtml += `
+                        <label for="${opt.id}" class="${labelClass}">
+                            <i class="fa-solid fa-circle-check check-icon text-gray-200 opacity-50 transition-opacity"></i>
+                            <span class="font-medium text-sm text-gray-700 leading-tight">${opt.label}</span>
+                        </label>`;
+                }
+                div.innerHTML = innerHtml;
+                container.appendChild(div);
+            });
+        }
+
+        function updateAnswers(group, value, isChecked, type) {
+            if (type === 'checkbox') {
+                if (isChecked) userAnswers[group].push(value);
+                else userAnswers[group] = userAnswers[group].filter(item => item !== value);
+            } else {
+                userAnswers[group] = value;
+            }
+            
+            // 目的が「減量」だった場合に追加の質問を表示
+            if (group === 'purpose') {
+                const targetContainer = document.getElementById('weight-loss-target-container');
+                if (value === 'p1') {
+                    targetContainer.classList.remove('hidden');
+                    targetContainer.style.animation = 'fadeIn 0.5s ease';
+                } else {
+                    targetContainer.classList.add('hidden');
+                    userAnswers.weightLossTarget = ''; // 減量以外の目的を選び直した場合はクリア
+                    // ラジオボタンの選択状態もリセットする
+                    document.querySelectorAll('input[name="weightLossTarget"]').forEach(el => el.checked = false);
+                }
+            }
+        }
+
+        function nextStep(step) {
+            // 簡易バリデーション
+            if (step === 2 && userAnswers.troubles.length === 0) { alert('少なくとも1つの悩みを選択してください。'); return; }
+            if (step === 3) {
+                if (!userAnswers.purpose) { alert('目的を選択してください。'); return; }
+                if (userAnswers.purpose === 'p1' && !userAnswers.weightLossTarget) { alert('目標とする減量幅を選択してください。'); return; }
+            }
+            if (step === 4 && (!userAnswers.environment || !userAnswers.experience)) { alert('環境と経験を選択してください。'); return; }
+            if (step === 5 && !userAnswers.level) { alert('運動レベルを選択してください。'); return; }
+
+            document.querySelectorAll('.step-container').forEach(el => el.classList.remove('active'));
+            document.getElementById(`step-${step}`).classList.add('active');
+            window.scrollTo(0, 0);
+        }
+
+        function prevStep(step) {
+            document.querySelectorAll('.step-container').forEach(el => el.classList.remove('active'));
+            document.getElementById(`step-${step}`).classList.add('active');
+            window.scrollTo(0, 0);
+        }
+
+        // 配列をランダムにシャッフルする補助関数
+        function shuffleArray(array) {
+            const newArr = [...array];
+            for (let i = newArr.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [newArr[i], newArr[j]] = [newArr[j], newArr[i]];
+            }
+            return newArr;
+        }
+
+        function calculateResult() {
+            nextStep(6);
+            
+            const env = userAnswers.environment;
+            const purpose = userAnswers.purpose;
+            const level = userAnswers.level;
+            const isGym = env === 'e2';
+
+            // 1. 強度・セット数・インターバルの決定 (運動能力ベース)
+            let reps = "10〜15回";
+            let holdTime = "30〜45秒";
+            let sets = "3セット";
+            let rest = "60秒";
+            let intensityLevel = "標準";
+            let singleExerciseMinutes = 5.5; // 1種目あたりの所要時間(分)
+
+            if (level === 'l1' || level === 'l2') {
+                reps = "10回（無理なく）"; holdTime = "20秒"; sets = "2セット"; rest = "90秒"; intensityLevel = "初心者向け・低負荷";
+                singleExerciseMinutes = 4;
+            } else if (level === 'l4') {
+                reps = isGym ? "8〜10回（限界の重さ）" : "15〜20回"; holdTime = "60秒"; sets = "3〜4セット"; rest = "45〜60秒"; intensityLevel = "高負荷";
+                singleExerciseMinutes = 7;
+            } else if (level === 'l0' && userAnswers.experience === 'exp1') {
+                reps = "10回"; holdTime = "20秒"; sets = "2セット"; rest = "60秒"; intensityLevel = "入門";
+                singleExerciseMinutes = 4;
+            }
+
+            // 体重・年齢などの取得
+            let weight = parseFloat(document.getElementById('input-weight').value);
+            if (isNaN(weight) || weight <= 0) weight = 55; // 空欄の場合は55kgとして計算
+            
+            let age = document.getElementById('input-age').value || "非公開";
+            let genderObj = document.querySelector('input[name="gender"]:checked');
+            let genderText = genderObj ? genderObj.nextElementSibling.innerText : "設定なし";
+
+            // 2. メニュー選定ロジック（シャッフル機能付き）
+            
+            // ウォーミングアップからランダムに1種目抽出
+            let availableWarmups = exercisesDB.warmup.filter(ex => ex.env === 'all' || ex.env === env || (env === 'e3' && ex.env === 'e1'));
+            availableWarmups = shuffleArray(availableWarmups);
+            let selectedWarmup = availableWarmups[0];
+            
+            // メイン種目は「有酸素(cardio)」以外から選ぶ
+            let availableMains = exercisesDB.main.filter(ex => {
+                const matchEnv = ex.env === env || (env === 'e3' && ex.env === 'e1');
+                const matchPurpose = ex.purpose.includes(purpose);
+                const isNotCardio = ex.type !== 'cardio';
+                return matchEnv && matchPurpose && isNotCardio;
+            });
+            availableMains = shuffleArray(availableMains);
+
+            // 種目が足りない場合のフォールバック
+            if(availableMains.length < 3) {
+                let fallbackMains = exercisesDB.main.filter(ex => (ex.env === env || (env === 'e3' && ex.env === 'e1')) && ex.type !== 'cardio');
+                fallbackMains = shuffleArray(fallbackMains);
+                availableMains = availableMains.concat(fallbackMains);
+                // 重複排除して再度シャッフル
+                availableMains = shuffleArray([...new Map(availableMains.map(item => [item.id, item])).values()]);
+            }
+            
+            const strengthMenu = availableMains.slice(0, 3);
+
+            // 締めの有酸素運動を1種目選ぶ
+            let availableCardios = exercisesDB.main.filter(ex => {
+                const matchEnv = ex.env === env || (env === 'e3' && ex.env === 'e1');
+                const isCardio = ex.type === 'cardio';
+                return matchEnv && isCardio;
+            });
+            availableCardios = shuffleArray(availableCardios);
+            let selectedCardio = availableCardios[0] || null;
+
+            // 有酸素の所要時間計算
+            let cardioMinutes = 0;
+            if (selectedCardio) {
+                if (isGym) {
+                    cardioMinutes = 15; // ジムの有酸素マシンは15分を想定
+                } else {
+                    cardioMinutes = singleExerciseMinutes; // 自宅の場合はサーキット形式
+                }
+            }
+
+            // 総所要時間(分) ＝ ウォーミングアップ(3分) ＋ メイン3種目 ＋ 有酸素
+            let totalMinutes = 3 + (singleExerciseMinutes * 3) + cardioMinutes;
+            
+            // 運動強度(METs)の設定
+            let mets = 4.5; // 基本
+            if (isGym) mets = 5.0; // ジムは高め
+            if (purpose === 'p1') mets = 5.5; // 減量目的(有酸素含む)は高め
+
+            // 消費カロリー計算: 1.05 × METs × 運動時間(時間) × 体重(kg)
+            let burnedCalories = Math.round(1.05 * mets * (totalMinutes / 60) * weight);
+
+            // 3. タイトルとコメント生成
+            let programTitle = "";
+            let commentText = "";
+            
+            if (purpose === 'p1') {
+                const targetLabel = questions.weightLossTargets.find(t => t.id === userAnswers.weightLossTarget)?.label.split('（')[0] || '';
+                programTitle = isGym ? `全身脂肪燃焼 マシン活用プログラム (-${targetLabel}目標)` : `お家で完結！代謝UPサーキット (-${targetLabel}目標)`;
+                // 特別な選択肢（見た目重視）を選んだ場合のテキスト調整
+                if(userAnswers.weightLossTarget === 'wlt4') programTitle = programTitle.replace('(-体重より見た目の引き締めを重視目標)', '(見た目引き締め特化)');
+                
+                commentText = `現在のお悩みを解決するために、全身の大きな筋肉を動かして消費カロリーを高める構成にしました。設定した休憩時間（${rest}）を守ることで脂肪燃焼効果が最大化します。`;
+            } else if (purpose === 'p2') {
+                programTitle = isGym ? "美ボディメイク 専用マシントレ" : "美尻＆くびれ形成 宅トレプログラム";
+                commentText = `気になる部位を引き締め、メリハリのあるラインを作るための種目をピックアップしました。${intensityLevel}の強度設定ですので、回数をこなすことより「効いている感覚」を大切にしてください。`;
+            } else if (purpose === 'p3') {
+                programTitle = isGym ? "筋力・体力向上 マシントレーニング" : "全身引き締め＆体力UPプログラム";
+                commentText = `疲れにくい身体と、基礎代謝の高い身体を作るために、全身の筋肉をバランスよく鍛えるメニューです。${intensityLevel}の負荷でしっかり筋肉に刺激を与えましょう。`;
+            } else {
+                programTitle = "姿勢・不調改善 バランスプログラム";
+                commentText = `お身体の負担を減らし、正しい姿勢を取り戻すためのメニューです。呼吸を止めずにリラックスして行いましょう。`;
+            }
+
+            // UIへの反映
+            document.getElementById('result-title').innerText = programTitle;
+            document.getElementById('result-comment').innerText = commentText;
+            document.getElementById('res-reps').innerText = reps;
+            document.getElementById('res-sets').innerText = sets;
+            document.getElementById('res-rest').innerText = rest;
+            document.getElementById('res-calorie').innerHTML = `${burnedCalories} <span class="text-xs text-gray-300">kcal</span>`;
+
+            // メニューリストのUI構築
+            const menuContainer = document.getElementById('menu-container');
+            menuContainer.innerHTML = ''; // クリア
+
+            // ウォーミングアップ追加
+            menuContainer.appendChild(createMenuCard('W-UP', selectedWarmup, '準備運動 (約3分)', 'gray'));
+
+            // メイン筋トレ種目追加
+            strengthMenu.forEach((menu, index) => {
+                const intensityStr = menu.isTimeBased ? `${holdTime} × ${sets}` : `${reps} × ${sets}`;
+                menuContainer.appendChild(createMenuCard(`MENU ${index+1}`, menu, intensityStr, 'blue'));
+            });
+
+            // 【追加】締めの有酸素種目追加
+            if (selectedCardio) {
+                let intensityStr = isGym ? "15〜20分" : `${holdTime} × ${sets}`;
+                menuContainer.appendChild(createMenuCard(`燃焼タイム`, selectedCardio, intensityStr, 'orange'));
+            }
+
+            // 4. LINE送信用のテキストデータ作成
+            generatedProgramText = `【あなた専用トレーニングメニュー】\n` +
+                                   `👤 ${age}歳 / ${genderText}\n\n` +
+                                   `診断結果：${programTitle}\n` +
+                                   `推奨強度：${intensityLevel}\n\n` +
+                                   `▼本日のメニュー構成\n` +
+                                   `0. ${selectedWarmup.name} (準備運動)\n` +
+                                   `   💡 ${selectedWarmup.instruction}\n\n`;
+            
+            strengthMenu.forEach((m, i) => {
+                const intensityStr = m.isTimeBased ? holdTime : reps;
+                generatedProgramText += `${i+1}. ${m.name} (${m.target}) [${intensityStr}]\n` +
+                                        `   💡 ${m.instruction}\n\n`;
+            });
+            
+            if (selectedCardio) {
+                const intensityStr = isGym ? "15〜20分" : holdTime;
+                generatedProgramText += `🔥 締めの有酸素\n` +
+                                        ` ${selectedCardio.name} (${selectedCardio.target}) [${intensityStr}]\n` +
+                                        `   💡 ${selectedCardio.instruction}\n\n`;
+            }
+
+            generatedProgramText += `[基本設定] ${sets} / 休憩${rest}\n` +
+                                    `🎯 推定消費カロリー: 約 ${burnedCalories} kcal\n\n` +
+                                    `※無理のない範囲で継続しましょう！`;
+        }
+
+        function createMenuCard(badgeText, menuObj, intensityInfo, colorMode) {
+            const div = document.createElement('div');
+            
+            let badgeColor = 'bg-blue-100 text-blue-700';
+            let icon = 'fa-dumbbell';
+            
+            if (colorMode === 'gray') {
+                badgeColor = 'bg-gray-200 text-gray-600';
+                icon = 'fa-child-reaching';
+            } else if (colorMode === 'orange') {
+                badgeColor = 'bg-orange-100 text-orange-700';
+                icon = 'fa-fire';
+            }
+            
+            // クリック時にモーダルを開くイベントを設定
+            div.className = 'result-card rounded-xl p-4 flex items-center gap-4 cursor-pointer hover:bg-yellow-50 transition-colors border border-transparent hover:border-yellow-200';
+            div.onclick = () => openModal(menuObj);
+            
+            div.innerHTML = `
+                <div class="flex-shrink-0 w-12 h-12 bg-gray-50 rounded-full flex items-center justify-center text-gray-400">
+                    <i class="fa-solid ${icon} text-xl"></i>
+                </div>
+                <div class="flex-grow">
+                    <div class="flex items-center gap-2 mb-1">
+                        <span class="text-[10px] font-bold px-2 py-0.5 rounded ${badgeColor}">${badgeText}</span>
+                        <span class="text-xs text-gray-500"><i class="fa-solid fa-bullseye"></i> ${menuObj.target}</span>
+                    </div>
+                    <h4 class="font-bold text-gray-800 text-sm flex items-center gap-2">
+                        ${menuObj.name}
+                        <i class="fa-solid fa-circle-question text-blue-400 text-xs"></i>
+                    </h4>
+                </div>
+                <div class="flex-shrink-0 text-right">
+                    <div class="text-xs font-bold text-gray-700 bg-gray-100 px-2 py-1 rounded">${intensityInfo}</div>
+                </div>
+            `;
+            return div;
+        }
+
+        // モーダルの開閉処理
+        function openModal(menuObj) {
+            document.getElementById('modal-title').innerText = menuObj.name;
+            document.getElementById('modal-target').innerText = `ターゲット: ${menuObj.target}`;
+            document.getElementById('modal-instruction').innerText = menuObj.instruction || 'この種目の解説は現在準備中です。';
+            
+            // 🌟 追加: 種目に応じたアイコンとテキストの動的判定
+            let visualIcon = 'fa-dumbbell';
+            let visualText = 'STRENGTH';
+            
+            if (menuObj.type === 'stretch') {
+                visualIcon = 'fa-child-reaching';
+                visualText = 'STRETCH';
+            } else if (menuObj.type === 'cardio' || menuObj.isTimeBased) {
+                visualIcon = 'fa-person-running';
+                visualText = 'CARDIO / CORE';
+            } else if (menuObj.target.includes('お尻') || menuObj.target.includes('下半身') || menuObj.target.includes('太もも')) {
+                visualIcon = 'fa-shoe-prints';
+                visualText = 'LOWER BODY';
+            } else if (menuObj.target.includes('背中') || menuObj.target.includes('胸') || menuObj.target.includes('肩')) {
+                visualIcon = 'fa-child';
+                visualText = 'UPPER BODY';
+            }
+
+            document.getElementById('modal-visual-icon').className = `fa-solid ${visualIcon} text-4xl text-yellow-400`;
+            document.getElementById('modal-visual-text').innerText = visualText;
+
+            // 🌟 追加: YouTube検索URLの動的生成
+            const encodedName = encodeURIComponent(menuObj.name);
+            const youtubeUrl = `https://www.youtube.com/results?search_query=${encodedName}+やり方+女性`;
+            document.getElementById('modal-youtube-btn').href = youtubeUrl;
+            
+            const modal = document.getElementById('exercise-modal');
+            const content = document.getElementById('exercise-modal-content');
+            
+            modal.classList.remove('hidden');
+            // 少し遅らせてopacityを1にすることでフェードイン
+            setTimeout(() => {
+                modal.classList.add('opacity-100');
+                content.classList.remove('scale-95');
+                content.classList.add('scale-100');
+            }, 10);
+        }
+
+        function closeModal() {
+            const modal = document.getElementById('exercise-modal');
+            const content = document.getElementById('exercise-modal-content');
+            
+            modal.classList.remove('opacity-100');
+            content.classList.remove('scale-100');
+            content.classList.add('scale-95');
+            
+            setTimeout(() => {
+                modal.classList.add('hidden');
+            }, 300); // tailwind transition duration
+        }
+
+        function sendToLine() {
+            const msgArea = document.getElementById('line-message');
+            
+            // LIFF環境（LINEアプリ内）で動いているかチェック
+            if (liff.isInClient()) {
+                liff.sendMessages([{
+                    type: 'text',
+                    text: generatedProgramText
+                }]).then(() => {
+                    msgArea.innerHTML = '<span class="text-green-600 font-bold"><i class="fa-solid fa-check"></i> LINEにメニューを送信しました！<br><span class="text-xs font-normal">画面を閉じてトークをご確認ください。</span></span>';
+                    
+                    // オプション: 送信成功後に自動でLIFF画面を閉じる場合は以下のコメントを外す
+                    // setTimeout(() => { liff.closeWindow(); }, 2000);
+                    
+                }).catch(err => {
+                    msgArea.innerText = "送信エラーが発生しました: " + err;
+                    console.error("LIFF send message error", err);
+                });
+            } else {
+                // デモ用（外部ブラウザで開いた場合）のクリップボードコピー＆メッセージ表示
+                navigator.clipboard.writeText(generatedProgramText).then(() => {
+                    msgArea.innerHTML = `
+                        <div class="bg-green-50 text-green-700 p-3 rounded-lg text-sm text-left shadow-sm border border-green-200 mt-2">
+                            <p class="font-bold mb-1"><i class="fa-solid fa-check-circle"></i> テキストをコピーしました</p>
+                            <p class="text-xs">※実際のLINEアプリ内で開くと、この内容が自動でトークに送信されます。</p>
+                            <pre class="mt-2 p-2 bg-white rounded text-[10px] text-gray-500 overflow-x-auto whitespace-pre-wrap border border-gray-100">${generatedProgramText}</pre>
+                        </div>`;
+                }).catch(err => {
+                    msgArea.innerHTML = '<span class="text-red-500">コピーに失敗しました。</span>';
+                });
+            }
+        }
+
+        // 初期化実行
+        window.onload = function() {
+            init(); // アンケートの描画
+            initializeLiff(); // LIFFの準備
+        };
+    </script>
+</body>
+</html>
