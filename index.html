@@ -844,21 +844,42 @@
                     // setTimeout(() => { liff.closeWindow(); }, 2000);
                     
                 }).catch(err => {
-                    msgArea.innerText = "送信エラーが発生しました: " + err;
+                    // ★ エラー詳細が画面に出るように修正
+                    msgArea.innerHTML = '<span class="text-red-500 font-bold">送信エラーが発生しました。</span><br><span class="text-xs text-red-400 text-left block mt-1">詳細: ' + (err.message || JSON.stringify(err)) + '</span><br><span class="text-[10px] text-gray-500 block mt-2 text-left">※LINEのトーク画面（公式アカウントやKeepメモ）から開いているか、設定で「chat_message.write」にチェックが入っているかご確認ください。</span>';
                     console.error("LIFF send message error", err);
                 });
             } else {
                 // デモ用（外部ブラウザで開いた場合）のクリップボードコピー＆メッセージ表示
-                navigator.clipboard.writeText(generatedProgramText).then(() => {
+                try {
+                    // iframe内での制約を回避するため document.execCommand('copy') を使用
+                    const textArea = document.createElement("textarea");
+                    textArea.value = generatedProgramText;
+                    
+                    // 画面に表示されないように見えない場所に配置
+                    textArea.style.position = "fixed";
+                    textArea.style.left = "-999999px";
+                    textArea.style.top = "-999999px";
+                    
+                    document.body.appendChild(textArea);
+                    textArea.focus();
+                    textArea.select();
+                    
+                    // コピーコマンドを実行
+                    document.execCommand('copy');
+                    
+                    // 使用後に要素を削除
+                    textArea.remove();
+
                     msgArea.innerHTML = `
                         <div class="bg-green-50 text-green-700 p-3 rounded-lg text-sm text-left shadow-sm border border-green-200 mt-2">
                             <p class="font-bold mb-1"><i class="fa-solid fa-check-circle"></i> テキストをコピーしました</p>
                             <p class="text-xs">※実際のLINEアプリ内で開くと、この内容が自動でトークに送信されます。</p>
                             <pre class="mt-2 p-2 bg-white rounded text-[10px] text-gray-500 overflow-x-auto whitespace-pre-wrap border border-gray-100">${generatedProgramText}</pre>
                         </div>`;
-                }).catch(err => {
+                } catch(err) {
                     msgArea.innerHTML = '<span class="text-red-500">コピーに失敗しました。</span>';
-                });
+                    console.error("Clipboard copy error", err);
+                }
             }
         }
 
