@@ -452,13 +452,17 @@
         let generatedProgramText = ""; // LINE送信用のテキスト保持
 
         // LIFFの初期化
-        const myLiffId = "2011894187"; // ★取得したLIFF IDを設定済み
+        const myLiffId = "2011894187-TkKztxgr";
 
         function initializeLiff() {
             liff.init({
                 liffId: myLiffId
             }).then(() => {
                 console.log("LIFF Initialized");
+                // ★追加: ログインしていない場合は自動的にログイン処理を行う
+                if (!liff.isLoggedIn()) {
+                    liff.login();
+                }
             }).catch((err) => {
                 console.error("LIFF Initialization failed", err);
             });
@@ -834,6 +838,15 @@
             
             // LIFF環境（LINEアプリ内）で動いているかチェック
             if (liff.isInClient()) {
+                // ★追加: 送信前に念のため再度ログイン状態をチェック
+                if (!liff.isLoggedIn()) {
+                    msgArea.innerHTML = '<span class="text-orange-500 font-bold"><i class="fa-solid fa-spinner fa-spin"></i> LINEの認証画面へ移動します...</span>';
+                    setTimeout(() => {
+                        liff.login();
+                    }, 1000);
+                    return;
+                }
+
                 liff.sendMessages([{
                     type: 'text',
                     text: generatedProgramText
